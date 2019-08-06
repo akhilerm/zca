@@ -9,9 +9,8 @@ name = "zca"
 path = "src/main.rs"
 
 # for of the libzfs bindings that removes the strict pkg requirements for now
-[dependencies.libzfs]
-branch = "0712"
-git = "https://github.com/gila/rust-libzfs"
+[dependencies.libzfs-rs]
+git = "https://github.com/akhilerm/libzfs-rs"
 
 [dependencies]
 # for gRPC we use the the tower eco-system
