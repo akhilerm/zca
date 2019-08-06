@@ -6,9 +6,11 @@ use crate::csi::{
     NodeUnpublishVolumeRequest, NodeUnpublishVolumeResponse, NodeUnstageVolumeRequest,
     NodeUnstageVolumeResponse,
 };
-use futures::future::FutureResult;
+use futures::future::{FutureResult, err};
 use futures::Future;
-use tower_grpc::{Request, Response, Status};
+use tower_grpc::{Code, Request, Response, Status};
+use tower_grpc::codegen::server::futures::ok;
+use libzfs_rs::zfs::LibZfs;
 
 /// our main structure
 #[derive(Clone, Debug, Default)]
@@ -41,9 +43,33 @@ impl server::Node for CsiNode {
 
     fn node_stage_volume(
         &mut self,
-        _request: Request<NodeStageVolumeRequest>,
+        request: Request<NodeStageVolumeRequest>,
     ) -> Self::NodeStageVolumeFuture {
-        unimplemented!()
+
+        // TODO: with grpc, try it out. Also get snapshot done here
+
+        let msg = request.into_inner();
+
+        // get data set name and pool name from the message
+        let ds_name = msg.volume_context.get("DataSetName").unwrap();
+
+        // get zfs handle
+        let zfs_handle = LibZfs::new();
+        if zfs_handle.is_some() {
+            let zfs = zfs_handle.unwrap();
+
+            // create data set with volume id as the name
+            let fs = zfs.create_filesystem(ds_name.as_str());
+
+            if fs.is_ok() {
+                Box::new(ok(Response::new(NodeStageVolumeResponse {})))
+            } else {
+                Box::new(err(Status::new(Code::Internal, "error in creating dataset")))
+            }
+        } else {
+            Box::new(err(Status::new(Code::Internal, "error in zfs handle")))
+        }
+
     }
 
     fn node_unstage_volume(
