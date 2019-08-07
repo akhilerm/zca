@@ -91,6 +91,10 @@ service Node {
 
   rpc NodeGetInfo (NodeGetInfoRequest)
     returns (NodeGetInfoResponse) {}
+
+  // additional method added for testing
+  rpc NodeListVolumes (NodeListVolumesRequest)
+    returns (NodeListVolumesResponse) {}
 }
 message GetPluginInfoRequest {
   // Intentionally empty.
@@ -1176,6 +1180,17 @@ message NodeUnpublishVolumeRequest {
 message NodeUnpublishVolumeResponse {
   // Intentionally empty.
 }
+
+// additional interfaces not part of CSI
+message NodeListVolumesRequest {
+  // Left empty
+}
+
+// list of volumes on node
+message NodeListVolumesResponse {
+  repeated string vol_names = 1;
+}
+
 message NodeGetVolumeStatsRequest {
   // The ID of the volume. This field is REQUIRED.
   string volume_id = 1;
