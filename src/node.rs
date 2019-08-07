@@ -66,17 +66,38 @@ impl server::Node for CsiNode {
             } else {
                 Box::new(err(Status::new(Code::Internal, "error in creating dataset")))
             }
+
         } else {
             Box::new(err(Status::new(Code::Internal, "error in zfs handle")))
         }
-
     }
 
     fn node_unstage_volume(
         &mut self,
-        _request: Request<NodeUnstageVolumeRequest>,
+        request: Request<NodeUnstageVolumeRequest>,
     ) -> Self::NodeUnstageVolumeFuture {
-        unimplemented!()
+        let msg = request.into_inner();
+
+        // get data set name and pool name from the message
+        let ds_name = msg.staging_target_path;
+
+        // get zfs handle
+        let zfs_handle = LibZfs::new();
+        if zfs_handle.is_some() {
+            let zfs = zfs_handle.unwrap();
+
+            // create data set with volume id as the name
+            let fs = zfs.destroy_filesystem(ds_name.as_str());
+
+            if fs.is_ok() {
+                Box::new(ok(Response::new(NodeUnstageVolumeResponse {})))
+            } else {
+                Box::new(err(Status::new(Code::Internal, "error in deleting dataset")))
+            }
+
+        } else {
+            Box::new(err(Status::new(Code::Internal, "error in zfs handle")))
+        }
     }
 
     fn node_publish_volume(
