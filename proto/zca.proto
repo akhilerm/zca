@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package zca;
+
+service NodePlusPlus {
+    rpc CreateDataSet (CreateDataSetRequest) returns (Null) {}
+    rpc DeleteDataSet (DeleteDataSetRequest) returns (Null) {}
+    rpc ListDataSet (Null) returns (ListDataSetResponse){}
+}
+
+message Null{}
+
+message CreateDataSetRequest {
+    string ds_id = 1;
+}
+
+message DeleteDataSetRequest {
+    string ds_id = 1;
+}
+
+message ListDataSetResponse {
+    repeated string ds_name = 1;
+}
