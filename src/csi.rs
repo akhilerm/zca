@@ -1174,6 +1174,15 @@ pub struct NodeUnpublishVolumeRequest {
 /// Intentionally empty.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct NodeUnpublishVolumeResponse {}
+// additional methods for listing
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct NodeListVolumesRequest {}
+
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct NodeListVolumesResponse {
+    #[prost(string, repeated, tag = "1")]
+    pub vol_names: ::std::vec::Vec<std::string::String>,
+}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct NodeGetVolumeStatsRequest {
     /// The ID of the volume. This field is REQUIRED.
@@ -1342,6 +1351,7 @@ pub mod client {
         NodeGetInfoResponse, NodeGetVolumeStatsRequest, NodeGetVolumeStatsResponse,
         NodePublishVolumeRequest, NodePublishVolumeResponse, NodeStageVolumeRequest,
         NodeStageVolumeResponse, NodeUnpublishVolumeRequest, NodeUnpublishVolumeResponse,
+        NodeListVolumesRequest, NodeListVolumesResponse,
         NodeUnstageVolumeRequest, NodeUnstageVolumeResponse, ProbeRequest, ProbeResponse,
         ValidateVolumeCapabilitiesRequest, ValidateVolumeCapabilitiesResponse,
     };
@@ -1650,6 +1660,19 @@ pub mod client {
             self.inner.unary(request, path)
         }
 
+        // new node list volumes
+        pub fn node_list_volumes<R>(
+            &mut self,
+            request: grpc::Request<NodeListVolumesRequest>,
+        ) -> grpc::unary::ResponseFuture<NodeListVolumesResponse, T::Future, T::ResponseBody>
+        where
+            T: grpc::GrpcService<R>,
+            grpc::unary::Once<NodeListVolumesRequest>: grpc::Encodable<R>,
+        {
+            let path = http::PathAndQuery::from_static("/csi.v1.Node/NodeListVolumes");
+            self.inner.unary(request, path)
+        }
+
         pub fn node_publish_volume<R>(
             &mut self,
             request: grpc::Request<NodePublishVolumeRequest>,
@@ -1739,6 +1762,7 @@ pub mod server {
         NodeGetInfoResponse, NodeGetVolumeStatsRequest, NodeGetVolumeStatsResponse,
         NodePublishVolumeRequest, NodePublishVolumeResponse, NodeStageVolumeRequest,
         NodeStageVolumeResponse, NodeUnpublishVolumeRequest, NodeUnpublishVolumeResponse,
+        NodeListVolumesRequest, NodeListVolumesResponse,
         NodeUnstageVolumeRequest, NodeUnstageVolumeResponse, ProbeRequest, ProbeResponse,
         ValidateVolumeCapabilitiesRequest, ValidateVolumeCapabilitiesResponse,
     };
@@ -3009,6 +3033,10 @@ pub mod server {
             Item = grpc::Response<NodeUnstageVolumeResponse>,
             Error = grpc::Status,
         >;
+        type NodeListVolumeFuture: futures::Future<
+          Item = grpc::Response<NodeListVolumesResponse>,
+            Error = grpc::Status,
+        >;
         type NodePublishVolumeFuture: futures::Future<
             Item = grpc::Response<NodePublishVolumeResponse>,
             Error = grpc::Status,
@@ -3043,6 +3071,11 @@ pub mod server {
             &mut self,
             request: grpc::Request<NodeUnstageVolumeRequest>,
         ) -> Self::NodeUnstageVolumeFuture;
+
+        fn node_list_volumes(
+            &mut self,
+            request: grpc::Request<NodeListVolumesRequest>,
+        ) -> Self::NodeListVolumeFuture;
 
         fn node_publish_volume(
             &mut self,
@@ -3117,6 +3150,13 @@ pub mod server {
                     let response = grpc::unary(service, request);
                     node::ResponseFuture {
                         kind: NodeUnstageVolume(response),
+                    }
+                }
+                "/csi.v1.Node/NodeListVolumes" => {
+                    let service = node::methods::NodeListVolumes(self.node.clone());
+                    let response = grpc::unary(service, request);
+                    node::ResponseFuture {
+                        kind: NodeListVolumes(response),
                     }
                 }
                 "/csi.v1.Node/NodePublishVolume" => {
@@ -3210,6 +3250,7 @@ pub mod server {
         use super::super::{
             NodeExpandVolumeRequest, NodeGetCapabilitiesRequest, NodeGetInfoRequest,
             NodeGetVolumeStatsRequest, NodePublishVolumeRequest, NodeStageVolumeRequest,
+            NodeListVolumesRequest,
             NodeUnpublishVolumeRequest, NodeUnstageVolumeRequest,
         };
         use super::Node;
@@ -3231,6 +3272,12 @@ pub mod server {
                     methods::NodeUnstageVolume<T>,
                     grpc::BoxBody,
                     NodeUnstageVolumeRequest,
+                >,
+                // NodeListVolumes
+                grpc::unary::ResponseFuture<
+                    methods::NodeListVolumes<T>,
+                    grpc::BoxBody,
+                    NodeListVolumesRequest,
                 >,
                 // NodePublishVolume
                 grpc::unary::ResponseFuture<
@@ -3298,6 +3345,13 @@ pub mod server {
                         });
                         Ok(response.into())
                     }
+                    NodeListVolumes(ref mut fut) => {
+                        let response = try_ready!(fut.poll());
+                        let response = response.map(|body| ResponseBody {
+                            kind: NodeListVolumes(body),
+                        });
+                        Ok(response.into())
+                    }
                     NodePublishVolume(ref mut fut) => {
                         let response = try_ready!(fut.poll());
                         let response = response.map(|body| ResponseBody {
@@ -3359,6 +3413,8 @@ pub mod server {
                 grpc::Encode<grpc::unary::Once<<methods::NodeStageVolume<T> as grpc::UnaryService<NodeStageVolumeRequest>>::Response>>,
                 // NodeUnstageVolume
                 grpc::Encode<grpc::unary::Once<<methods::NodeUnstageVolume<T> as grpc::UnaryService<NodeUnstageVolumeRequest>>::Response>>,
+                // Nodelist volumes
+                grpc::Encode<grpc::unary::Once<<methods::NodeListVolumes<T> as grpc::UnaryService<NodeListVolumesRequest>>::Response>>,
                 // NodePublishVolume
                 grpc::Encode<grpc::unary::Once<<methods::NodePublishVolume<T> as grpc::UnaryService<NodePublishVolumeRequest>>::Response>>,
                 // NodeUnpublishVolume
@@ -3389,6 +3445,7 @@ pub mod server {
                 match self.kind {
                     NodeStageVolume(ref v) => v.is_end_stream(),
                     NodeUnstageVolume(ref v) => v.is_end_stream(),
+                    NodeListVolumes(ref v) => v.is_end_stream(),
                     NodePublishVolume(ref v) => v.is_end_stream(),
                     NodeUnpublishVolume(ref v) => v.is_end_stream(),
                     NodeGetVolumeStats(ref v) => v.is_end_stream(),
@@ -3405,6 +3462,7 @@ pub mod server {
                 match self.kind {
                     NodeStageVolume(ref mut v) => v.poll_data(),
                     NodeUnstageVolume(ref mut v) => v.poll_data(),
+                    NodeListVolumes(ref mut v) => v.poll_data(),
                     NodePublishVolume(ref mut v) => v.poll_data(),
                     NodeUnpublishVolume(ref mut v) => v.poll_data(),
                     NodeGetVolumeStats(ref mut v) => v.poll_data(),
@@ -3421,6 +3479,7 @@ pub mod server {
                 match self.kind {
                     NodeStageVolume(ref mut v) => v.poll_trailers(),
                     NodeUnstageVolume(ref mut v) => v.poll_trailers(),
+                    NodeListVolumes(ref mut v) => v.poll_trailers(),
                     NodePublishVolume(ref mut v) => v.poll_trailers(),
                     NodeUnpublishVolume(ref mut v) => v.poll_trailers(),
                     NodeGetVolumeStats(ref mut v) => v.poll_trailers(),
@@ -3437,6 +3496,7 @@ pub mod server {
         pub(super) enum Kind<
             NodeStageVolume,
             NodeUnstageVolume,
+            NodeListVolumes,
             NodePublishVolume,
             NodeUnpublishVolume,
             NodeGetVolumeStats,
@@ -3447,6 +3507,7 @@ pub mod server {
         > {
             NodeStageVolume(NodeStageVolume),
             NodeUnstageVolume(NodeUnstageVolume),
+            NodeListVolumes(NodeListVolumes),
             NodePublishVolume(NodePublishVolume),
             NodeUnpublishVolume(NodeUnpublishVolume),
             NodeGetVolumeStats(NodeGetVolumeStats),
@@ -3464,6 +3525,7 @@ pub mod server {
                 NodePublishVolumeRequest, NodePublishVolumeResponse, NodeStageVolumeRequest,
                 NodeStageVolumeResponse, NodeUnpublishVolumeRequest, NodeUnpublishVolumeResponse,
                 NodeUnstageVolumeRequest, NodeUnstageVolumeResponse,
+                NodeListVolumesRequest, NodeListVolumesResponse,
             };
             use tower_grpc::codegen::server::*;
 
@@ -3505,6 +3567,29 @@ pub mod server {
                     request: grpc::Request<NodeUnstageVolumeRequest>,
                 ) -> Self::Future {
                     self.0.node_unstage_volume(request)
+                }
+            }
+
+            // additional
+            pub struct NodeListVolumes<T>(pub T);
+
+            impl<T> tower::Service<grpc::Request<NodeListVolumesRequest>> for NodeListVolumes<T>
+                where
+                    T: Node,
+            {
+                type Response = grpc::Response<NodeListVolumesResponse>;
+                type Error = grpc::Status;
+                type Future = T::NodeListVolumeFuture;
+
+                fn poll_ready(&mut self) -> futures::Poll<(), Self::Error> {
+                    Ok(futures::Async::Ready(()))
+                }
+
+                fn call(
+                    &mut self,
+                    request: grpc::Request<NodeListVolumesRequest>,
+                ) -> Self::Future {
+                    self.0.node_list_volumes(request)
                 }
             }
 

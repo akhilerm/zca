@@ -10,7 +10,7 @@ path = "src/main.rs"
 
 # for of the libzfs bindings that removes the strict pkg requirements for now
 [dependencies.libzfs-rs]
-git = "https://github.com/akhilerm/libzfs-rs"
+git = "https://github.com/gila/libzfs-rs"
 
 [dependencies]
 # for gRPC we use the the tower eco-system

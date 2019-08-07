@@ -4,13 +4,14 @@ use crate::csi::{
     NodeGetVolumeStatsRequest, NodeGetVolumeStatsResponse, NodePublishVolumeRequest,
     NodePublishVolumeResponse, NodeStageVolumeRequest, NodeStageVolumeResponse,
     NodeUnpublishVolumeRequest, NodeUnpublishVolumeResponse, NodeUnstageVolumeRequest,
-    NodeUnstageVolumeResponse,
+    NodeUnstageVolumeResponse, NodeListVolumesResponse,NodeListVolumesRequest,
 };
 use futures::future::{FutureResult, err};
 use futures::Future;
 use tower_grpc::{Code, Request, Response, Status};
 use tower_grpc::codegen::server::futures::ok;
 use libzfs_rs::zfs::LibZfs;
+use std::fmt::Error;
 
 /// our main structure
 #[derive(Clone, Debug, Default)]
@@ -31,6 +32,8 @@ impl server::Node for CsiNode {
         Box<dyn Future<Item = Response<NodeStageVolumeResponse>, Error = Status> + Send>;
     type NodeUnstageVolumeFuture =
         Box<dyn Future<Item = Response<NodeUnstageVolumeResponse>, Error = Status> + Send>;
+    type NodeListVolumeFuture =
+        Box<dyn Future<Item = Response<NodeListVolumesResponse>, Error = Status> + Send>;
     type NodePublishVolumeFuture =
         Box<dyn Future<Item = Response<NodePublishVolumeResponse>, Error = Status> + Send>;
     type NodeUnpublishVolumeFuture =
@@ -112,6 +115,27 @@ impl server::Node for CsiNode {
         _request: Request<NodeUnpublishVolumeRequest>,
     ) -> Self::NodeUnpublishVolumeFuture {
         unimplemented!()
+    }
+
+    fn node_list_volumes(
+        &mut self,
+        request: Request<NodeListVolumesRequest>,
+    ) -> Self::NodeListVolumeFuture {
+
+        // the pool/dataset on which to iterate
+        let pool_name = "pool";
+
+        let zfs_handle = LibZfs::new();
+
+        //if zfs_handle.is_some() {
+        let mut zfs = zfs_handle.unwrap();
+
+        let list = zfs.iter_root(pool_name);
+
+        Box::new(ok(Response::new(NodeListVolumesResponse{
+            vol_names: list.to_vec(),
+        })))
+
     }
 
     fn node_get_volume_stats(
